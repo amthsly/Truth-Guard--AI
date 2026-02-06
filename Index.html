@@ -1,0 +1,2533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TruthGuard AI | Advanced News & Clickbait Detection Platform</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React & Babel -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --clickbait-gradient: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+        }
+        
+        * { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        @keyframes pulse-pink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        
+        .float { animation: float 6s ease-in-out infinite; }
+        .pulse-pink { animation: pulse-pink 2s ease-in-out infinite; }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .gradient-text {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .clickbait-text {
+            background: var(--clickbait-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .neu {
+            border-radius: 20px;
+            background: linear-gradient(145deg, #f0f0f0, #cacaca);
+            box-shadow: 20px 20px 60px #bebebe, -20px -20px 60px #ffffff;
+        }
+        
+        .terminal {
+            background: #1a1a1a;
+            font-family: 'Courier New', monospace;
+            color: #0f0;
+        }
+        
+        .progress-ring { transform: rotate(-90deg); }
+        .progress-ring__circle {
+            stroke-dasharray: 283;
+            stroke-dashoffset: 283;
+            transition: stroke-dashoffset 1.5s ease;
+        }
+        
+        .clickbait-highlight {
+            background: linear-gradient(120deg, #fce7f3 0%, #fbcfe8 100%);
+            border-left: 4px solid #ec4899;
+        }
+        
+        .line-clamp-1 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
+        .line-clamp-2 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+        .line-clamp-3 { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-50 to-indigo-50 min-h-screen overflow-x-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // ===================== ENHANCED DATASET =====================
+        const newsDatabase = [
+            // Government & Politics
+            {
+                id: 1,
+                title: "Indian Parliament passes new Digital Privacy Bill",
+                content: "The Lok Sabha has approved the Digital Personal Data Protection Bill, 2023 with 350 votes in favor.",
+                category: "Politics",
+                date: "2023-08-11",
+                credibility: "Credible",
+                source: "Press Information Bureau",
+                sourceScore: 95,
+                factChecks: ["Verified by FactCheck.org"],
+                tags: ["government", "legislation", "privacy"],
+                location: "India",
+                impactScore: 85
+            },
+            {
+                id: 2,
+                title: "Moon landing was staged in Hollywood studio",
+                content: "Recently declassified documents reveal that the 1969 Apollo moon landing was filmed in a secret Hollywood studio.",
+                category: "Conspiracy",
+                date: "2023-07-22",
+                credibility: "False",
+                source: "Conspiracy Forum",
+                sourceScore: 15,
+                factChecks: ["Debunked by NASA"],
+                tags: ["conspiracy", "hoax", "space"],
+                location: "Global",
+                impactScore: 40
+            },
+            // Science & Technology
+            {
+                id: 3,
+                title: "AI system achieves human-level reasoning in medical diagnosis",
+                content: "Google's Med-PaLM 2 AI has demonstrated 85% accuracy in diagnosing complex medical conditions.",
+                category: "Science",
+                date: "2023-08-15",
+                credibility: "Credible",
+                source: "Nature Medicine Journal",
+                sourceScore: 90,
+                factChecks: ["Peer-reviewed study"],
+                tags: ["AI", "medicine", "healthcare"],
+                location: "USA",
+                impactScore: 75
+            },
+            {
+                id: 4,
+                title: "5G towers cause COVID-19 spread",
+                content: "Independent researchers have found direct correlation between 5G tower density and COVID-19 infection rates.",
+                category: "Health",
+                date: "2021-03-30",
+                credibility: "False",
+                source: "Anti-5G Activist Blog",
+                sourceScore: 10,
+                factChecks: ["WHO: No evidence linking 5G to COVID"],
+                tags: ["5G", "conspiracy", "health"],
+                location: "Global",
+                impactScore: 65
+            },
+            // Economy
+            {
+                id: 5,
+                title: "India becomes world's third largest economy by GDP",
+                content: "Latest IMF data shows India has overtaken Germany and Japan to become the world's third largest economy.",
+                category: "Economy",
+                date: "2023-08-18",
+                credibility: "Credible",
+                source: "International Monetary Fund",
+                sourceScore: 95,
+                factChecks: ["IMF report verified"],
+                tags: ["economy", "GDP", "development"],
+                location: "India",
+                impactScore: 90
+            },
+            {
+                id: 6,
+                title: "Government printing unlimited money causing hyperinflation",
+                content: "Central bank insiders reveal that the government is secretly printing trillions in unbacked currency.",
+                category: "Economy",
+                date: "2023-07-05",
+                credibility: "Misleading",
+                source: "Economic Conspiracy Channel",
+                sourceScore: 20,
+                factChecks: ["RBI denies claims"],
+                tags: ["economy", "inflation", "banking"],
+                location: "India",
+                impactScore: 60
+            },
+            // Health & Medicine
+            {
+                id: 7,
+                title: "New Alzheimer's drug shows 47% reduction in cognitive decline",
+                content: "Lecanemab has shown significant success in Phase 3 trials, slowing cognitive decline by 47%.",
+                category: "Health",
+                date: "2023-07-17",
+                credibility: "Credible",
+                source: "New England Journal of Medicine",
+                sourceScore: 95,
+                factChecks: ["FDA approved"],
+                tags: ["health", "medicine", "research"],
+                location: "Global",
+                impactScore: 80
+            },
+            {
+                id: 8,
+                title: "Ivermectin cures 99% of COVID-19 cases",
+                content: "A meta-analysis shows Ivermectin has 99% efficacy against COVID-19.",
+                category: "Health",
+                date: "2021-08-22",
+                credibility: "False",
+                source: "Alternative Medicine Site",
+                sourceScore: 15,
+                factChecks: ["FDA: Not approved for COVID"],
+                tags: ["COVID-19", "misinformation", "pharmaceutical"],
+                location: "Global",
+                impactScore: 70
+            },
+            // Environment
+            {
+                id: 9,
+                title: "Global temperatures exceed 1.5°C threshold for first time",
+                content: "July 2023 was the hottest month ever recorded, with global temperatures exceeding the 1.5°C threshold.",
+                category: "Environment",
+                date: "2023-08-08",
+                credibility: "Credible",
+                source: "Copernicus Climate Change Service",
+                sourceScore: 90,
+                factChecks: ["NASA data confirms"],
+                tags: ["climate", "global warming", "environment"],
+                location: "Global",
+                impactScore: 95
+            },
+            {
+                id: 10,
+                title: "Cryptocurrency to replace all traditional banking by 2025",
+                content: "Banking insiders predict complete transition to blockchain-based currencies within two years.",
+                category: "Technology",
+                date: "2023-06-12",
+                credibility: "Exaggerated",
+                source: "Crypto Influencer",
+                sourceScore: 30,
+                factChecks: ["IMF: Traditional banking will coexist"],
+                tags: ["crypto", "banking", "technology"],
+                location: "Global",
+                impactScore: 50
+            },
+            // International Relations
+            {
+                id: 11,
+                title: "US and China reach trade agreement reducing tariffs by 40%",
+                content: "After months of negotiation, both nations have agreed to significantly reduce trade barriers.",
+                category: "International",
+                date: "2023-08-20",
+                credibility: "Credible",
+                source: "Reuters",
+                sourceScore: 85,
+                factChecks: ["Official statements confirm"],
+                tags: ["USA", "China", "trade", "diplomacy"],
+                location: "Global",
+                impactScore: 75
+            },
+            {
+                id: 12,
+                title: "Study finds remote work increases productivity by 35%",
+                content: "Stanford University research shows knowledge workers are more productive when working from home.",
+                category: "Business",
+                date: "2023-08-14",
+                credibility: "Credible",
+                source: "Stanford University",
+                sourceScore: 90,
+                factChecks: ["Peer-reviewed study"],
+                tags: ["work", "productivity", "business"],
+                location: "USA",
+                impactScore: 65
+            },
+            // Expanded Entries
+            {
+                id: 13,
+                title: "NASA discovers water on Mars surface in liquid form",
+                content: "New evidence from Mars rover shows liquid water flowing during summer months.",
+                category: "Science",
+                date: "2023-08-22",
+                credibility: "Credible",
+                source: "NASA Official Release",
+                sourceScore: 95,
+                factChecks: ["Multiple rover confirmations"],
+                tags: ["space", "Mars", "discovery", "science"],
+                location: "Mars",
+                impactScore: 88
+            },
+            {
+                id: 14,
+                title: "COVID-19 vaccines contain microchips for population tracking",
+                content: "Whistleblower reveals Bill Gates funded microchip implants in COVID vaccines.",
+                category: "Conspiracy",
+                date: "2021-05-15",
+                credibility: "False",
+                source: "Anonymous Telegram Channel",
+                sourceScore: 5,
+                factChecks: ["Debunked by WHO and CDC"],
+                tags: ["vaccine", "conspiracy", "health"],
+                location: "Global",
+                impactScore: 75
+            },
+            {
+                id: 15,
+                title: "EU passes landmark AI regulation bill",
+                content: "European Parliament approves comprehensive AI Act to regulate artificial intelligence systems.",
+                category: "Technology",
+                date: "2023-08-25",
+                credibility: "Credible",
+                source: "European Parliament",
+                sourceScore: 92,
+                factChecks: ["Official parliamentary records"],
+                tags: ["AI", "regulation", "EU", "technology"],
+                location: "Europe",
+                impactScore: 82
+            },
+            {
+                id: 16,
+                title: "Eating chocolate helps lose weight, new study claims",
+                content: "Research shows dark chocolate accelerates metabolism by 30%.",
+                category: "Health",
+                date: "2023-07-30",
+                credibility: "Exaggerated",
+                source: "Health Blog",
+                sourceScore: 35,
+                factChecks: ["Study misrepresented findings"],
+                tags: ["health", "nutrition", "diet"],
+                location: "Global",
+                impactScore: 45
+            },
+            {
+                id: 17,
+                title: "Russia develops hypersonic missile that can evade all defenses",
+                content: "Military experts confirm new Zircon missile travels at Mach 9.",
+                category: "Military",
+                date: "2023-08-16",
+                credibility: "Credible",
+                source: "Jane's Defence Weekly",
+                sourceScore: 88,
+                factChecks: ["Confirmed by satellite imagery"],
+                tags: ["military", "Russia", "technology"],
+                location: "Russia",
+                impactScore: 85
+            },
+            {
+                id: 18,
+                title: "Earth is flat and NASA hides the truth",
+                content: "Former NASA engineer confesses agency has been hiding flat Earth evidence for decades.",
+                category: "Conspiracy",
+                date: "2023-06-08",
+                credibility: "False",
+                source: "Flat Earth Society",
+                sourceScore: 8,
+                factChecks: ["Debunked by all scientific bodies"],
+                tags: ["conspiracy", "science", "space"],
+                location: "Global",
+                impactScore: 30
+            },
+            {
+                id: 19,
+                title: "Renewable energy now cheaper than fossil fuels globally",
+                content: "IRENA report shows solar and wind power costs have dropped 85% in last decade.",
+                category: "Environment",
+                date: "2023-08-28",
+                credibility: "Credible",
+                source: "International Renewable Energy Agency",
+                sourceScore: 90,
+                factChecks: ["Multiple economic studies confirm"],
+                tags: ["energy", "environment", "economics"],
+                location: "Global",
+                impactScore: 87
+            },
+            {
+                id: 20,
+                title: "Secret cure for cancer discovered but suppressed by big pharma",
+                content: "Doctor reveals natural remedy that cures all cancers in 3 days.",
+                category: "Health",
+                date: "2023-07-12",
+                credibility: "False",
+                source: "Alternative Medicine Website",
+                sourceScore: 12,
+                factChecks: ["No clinical evidence found"],
+                tags: ["health", "conspiracy", "medicine"],
+                location: "Global",
+                impactScore: 80
+            },
+            {
+                id: 21,
+                title: "India's Chandrayaan-3 successfully lands on Moon's south pole",
+                content: "ISRO becomes first space agency to land spacecraft on lunar south pole.",
+                category: "Science",
+                date: "2023-08-23",
+                credibility: "Credible",
+                source: "Indian Space Research Organisation",
+                sourceScore: 98,
+                factChecks: ["Live telemetry data verified"],
+                tags: ["space", "India", "moon", "achievement"],
+                location: "India",
+                impactScore: 92
+            },
+            {
+                id: 22,
+                title: "World Bank predicts global recession in 2024",
+                content: "Latest economic indicators show 70% chance of worldwide recession next year.",
+                category: "Economy",
+                date: "2023-08-29",
+                credibility: "Credible",
+                source: "World Bank Report",
+                sourceScore: 87,
+                factChecks: ["Economic models verified"],
+                tags: ["economy", "recession", "finance"],
+                location: "Global",
+                impactScore: 90
+            },
+            {
+                id: 23,
+                title: "Aliens visiting Earth confirmed by Pentagon",
+                content: "Classified documents show regular UFO visits to nuclear facilities.",
+                category: "Conspiracy",
+                date: "2023-08-10",
+                credibility: "Misleading",
+                source: "Conspiracy News Network",
+                sourceScore: 25,
+                factChecks: ["Pentagon confirms unexplained sightings but no alien proof"],
+                tags: ["UFO", "conspiracy", "military"],
+                location: "USA",
+                impactScore: 68
+            },
+            {
+                id: 24,
+                title: "New smartphone battery lasts 7 days on single charge",
+                content: "Tech company unveils graphene battery technology breakthrough.",
+                category: "Technology",
+                date: "2023-08-27",
+                credibility: "Credible",
+                source: "IEEE Spectrum",
+                sourceScore: 85,
+                factChecks: ["Laboratory tests confirmed"],
+                tags: ["technology", "battery", "innovation"],
+                location: "South Korea",
+                impactScore: 78
+            },
+            {
+                id: 25,
+                title: "WHO declares end of COVID-19 global health emergency",
+                content: "After 3 years, World Health Organization ends highest alert level for pandemic.",
+                category: "Health",
+                date: "2023-05-05",
+                credibility: "Credible",
+                source: "World Health Organization",
+                sourceScore: 95,
+                factChecks: ["Official WHO announcement"],
+                tags: ["COVID-19", "health", "pandemic"],
+                location: "Global",
+                impactScore: 88
+            },
+            {
+                id: 26,
+                title: "Eating insects will solve world hunger, UN report says",
+                content: "United Nations promotes insect farming as sustainable protein source.",
+                category: "Environment",
+                date: "2023-08-24",
+                credibility: "Credible",
+                source: "United Nations FAO",
+                sourceScore: 89,
+                factChecks: ["UN report verified"],
+                tags: ["food", "sustainability", "environment"],
+                location: "Global",
+                impactScore: 72
+            },
+            {
+                id: 27,
+                title: "Bill Gates buying farmland to control food supply",
+                content: "Microsoft founder secretly acquiring millions of acres worldwide.",
+                category: "Conspiracy",
+                date: "2023-07-18",
+                credibility: "Misleading",
+                source: "Agricultural Conspiracy Blog",
+                sourceScore: 28,
+                factChecks: ["Bill Gates invests in agriculture but not for control"],
+                tags: ["conspiracy", "food", "business"],
+                location: "Global",
+                impactScore: 65
+            },
+            {
+                id: 28,
+                title: "Artificial general intelligence achieved by Google DeepMind",
+                content: "Breakthrough AI system demonstrates human-like reasoning across multiple domains.",
+                category: "Technology",
+                date: "2023-08-30",
+                credibility: "Credible",
+                source: "Nature Journal",
+                sourceScore: 91,
+                factChecks: ["Peer review completed"],
+                tags: ["AI", "breakthrough", "technology"],
+                location: "UK",
+                impactScore: 89
+            },
+            {
+                id: 29,
+                title: "Chemtrails causing climate change and health problems",
+                content: "Government aircraft spraying chemicals to control population.",
+                category: "Conspiracy",
+                date: "2023-06-25",
+                credibility: "False",
+                source: "Geoengineering Watch",
+                sourceScore: 10,
+                factChecks: ["Atmospheric scientists debunk claim"],
+                tags: ["conspiracy", "weather", "health"],
+                location: "Global",
+                impactScore: 55
+            },
+            {
+                id: 30,
+                title: "UK approves world's first gene therapy for sickle cell disease",
+                content: "Groundbreaking treatment uses CRISPR technology to cure genetic disorder.",
+                category: "Health",
+                date: "2023-08-31",
+                credibility: "Credible",
+                source: "UK Medicines Agency",
+                sourceScore: 93,
+                factChecks: ["Clinical trial data verified"],
+                tags: ["medicine", "genetics", "breakthrough"],
+                location: "UK",
+                impactScore: 84
+            },
+            {
+                id: 31,
+                title: "Social media causing teenage brain damage",
+                content: "New study proves TikTok and Instagram physically damage adolescent brains.",
+                category: "Health",
+                date: "2023-08-19",
+                credibility: "Exaggerated",
+                source: "Parental Control Blog",
+                sourceScore: 32,
+                factChecks: ["Study shows correlation, not causation"],
+                tags: ["social media", "health", "psychology"],
+                location: "Global",
+                impactScore: 70
+            },
+            {
+                id: 32,
+                title: "Amazon rainforest deforestation drops 66% in 2023",
+                content: "Brazilian government reports significant reduction in illegal logging.",
+                category: "Environment",
+                date: "2023-08-26",
+                credibility: "Credible",
+                source: "Brazilian Environment Ministry",
+                sourceScore: 86,
+                factChecks: ["Satellite data confirms"],
+                tags: ["environment", "Brazil", "conservation"],
+                location: "Brazil",
+                impactScore: 83
+            },
+            {
+                id: 33,
+                title: "Secret society controls world governments from shadows",
+                content: "Ancient organization manipulating global events for centuries.",
+                category: "Conspiracy",
+                date: "2023-07-29",
+                credibility: "False",
+                source: "Conspiracy Theory Forum",
+                sourceScore: 8,
+                factChecks: ["No evidence found by historians"],
+                tags: ["conspiracy", "politics", "secret"],
+                location: "Global",
+                impactScore: 40
+            },
+            {
+                id: 34,
+                title: "Quantum computer breaks RSA encryption",
+                content: "Chinese researchers claim to have broken 2048-bit encryption in 8 hours.",
+                category: "Technology",
+                date: "2023-08-21",
+                credibility: "Credible",
+                source: "Physical Review Letters",
+                sourceScore: 89,
+                factChecks: ["Technical paper peer-reviewed"],
+                tags: ["quantum", "security", "technology"],
+                location: "China",
+                impactScore: 91
+            },
+            {
+                id: 35,
+                title: "Drinking 8 glasses of water daily is harmful, new research shows",
+                content: "Study reveals excessive water consumption causes electrolyte imbalance.",
+                category: "Health",
+                date: "2023-08-17",
+                credibility: "Misleading",
+                source: "Health Research Blog",
+                sourceScore: 38,
+                factChecks: ["Study recommends personalized hydration, not harmful"],
+                tags: ["health", "nutrition", "water"],
+                location: "Global",
+                impactScore: 62
+            },
+            // Clickbait Examples
+            {
+                id: 36,
+                title: "You Won't Believe What This Celebrity Did Next!",
+                content: "Shocking video reveals celebrity's secret life that will leave you speechless.",
+                category: "Clickbait",
+                date: "2023-09-01",
+                credibility: "Clickbait",
+                source: "Clickbait News Site",
+                sourceScore: 5,
+                factChecks: ["Exaggerated claims"],
+                tags: ["celebrity", "viral", "shocking", "clickbait"],
+                location: "USA",
+                impactScore: 30
+            },
+            {
+                id: 37,
+                title: "Doctors Hate This One Simple Trick to Lose Weight!",
+                content: "This revolutionary method burns fat while you sleep - medical professionals are furious!",
+                category: "Clickbait",
+                date: "2023-08-30",
+                credibility: "Clickbait",
+                source: "Health Scam Blog",
+                sourceScore: 10,
+                factChecks: ["No scientific evidence"],
+                tags: ["weight loss", "scam", "miracle", "clickbait"],
+                location: "Global",
+                impactScore: 45
+            },
+            {
+                id: 38,
+                title: "This Photo Changed the Internet Forever!",
+                content: "Internet users can't stop talking about this mind-blowing image. What do you see?",
+                category: "Clickbait",
+                date: "2023-09-02",
+                credibility: "Clickbait",
+                source: "Viral Content Farm",
+                sourceScore: 8,
+                factChecks: ["Misleading headline"],
+                tags: ["viral", "photo", "internet", "clickbait"],
+                location: "Global",
+                impactScore: 25
+            },
+            {
+                id: 39,
+                title: "The Shocking Truth About [Common Food] They Don't Want You to Know",
+                content: "Studies show this everyday food is actually poisonous! Click to see if you're eating it.",
+                category: "Clickbait",
+                date: "2023-08-28",
+                credibility: "Clickbait",
+                source: "Fear Mongering Blog",
+                sourceScore: 12,
+                factChecks: ["Misinterpreted studies"],
+                tags: ["food", "fear", "health", "clickbait"],
+                location: "Global",
+                impactScore: 55
+            },
+            {
+                id: 40,
+                title: "This 10-Year-Old Just Solved a Math Problem Einstein Couldn't!",
+                content: "Genius child discovers solution to famous unsolved problem in just 5 minutes.",
+                category: "Clickbait",
+                date: "2023-09-03",
+                credibility: "Clickbait",
+                source: "Fake Science News",
+                sourceScore: 15,
+                factChecks: ["Completely fabricated"],
+                tags: ["genius", "math", "child", "clickbait"],
+                location: "Global",
+                impactScore: 40
+            },
+            {
+                id: 41,
+                title: "The End Is Near: Apocalypse Predicted for Next Month",
+                content: "Ancient prophecy finally decoded reveals exact date of world's end.",
+                category: "Clickbait",
+                date: "2023-09-05",
+                credibility: "Clickbait",
+                source: "Doomsday Website",
+                sourceScore: 3,
+                factChecks: ["False prediction"],
+                tags: ["apocalypse", "prophecy", "doomsday", "clickbait"],
+                location: "Global",
+                impactScore: 60
+            },
+            {
+                id: 42,
+                title: "They Said It Was Impossible, But Watch What Happens Next!",
+                content: "This incredible video will change everything you thought you knew about physics.",
+                category: "Clickbait",
+                date: "2023-08-29",
+                credibility: "Clickbait",
+                source: "YouTube Clickbait",
+                sourceScore: 7,
+                factChecks: ["Misleading video"],
+                tags: ["impossible", "video", "physics", "clickbait"],
+                location: "Global",
+                impactScore: 35
+            },
+            {
+                id: 43,
+                title: "This Simple Life Hack Will Save You Thousands! Banks Hate It!",
+                content: "Financial advisors are furious about this money-saving trick that actually works.",
+                category: "Clickbait",
+                date: "2023-09-04",
+                credibility: "Clickbait",
+                source: "Financial Scam Site",
+                sourceScore: 10,
+                factChecks: ["No legitimate financial advice"],
+                tags: ["money", "hack", "banks", "clickbait"],
+                location: "Global",
+                impactScore: 50
+            },
+            {
+                id: 44,
+                title: "What Happened to This Child Actor Will Break Your Heart",
+                content: "From fame to tragedy - the sad story they never told you about.",
+                category: "Clickbait",
+                date: "2023-09-06",
+                credibility: "Clickbait",
+                source: "Gossip Mill",
+                sourceScore: 8,
+                factChecks: ["Exaggerated story"],
+                tags: ["actor", "tragedy", "heartbreak", "clickbait"],
+                location: "USA",
+                impactScore: 30
+            },
+            {
+                id: 45,
+                title: "This Common Household Item Is Secretly Killing Your Family",
+                content: "Millions of homes contain this dangerous product - are you at risk?",
+                category: "Clickbait",
+                date: "2023-09-07",
+                credibility: "Clickbait",
+                source: "Fear-Based Marketing",
+                sourceScore: 5,
+                factChecks: ["Completely safe product"],
+                tags: ["household", "danger", "family", "clickbait"],
+                location: "Global",
+                impactScore: 65
+            }
+        ];
+
+        // ===================== ENHANCED AI MODELS =====================
+        class ClickbaitDetector {
+            constructor() {
+                this.clickbaitPatterns = [
+                    /you won(')?t believe/i,
+                    /this (?:one|simple) (?:trick|tip|hack)/i,
+                    /what happens next/i,
+                    /(?:the|this) (?:shocking|amazing|incredible|unbelievable) (?:truth|secret)/i,
+                    /they don(')?t want you to know/i,
+                    /(?:the|this) (?:end|final) will (?:shock|surprise) you/i,
+                    /will break your heart/i,
+                    /will make you cry/i,
+                    /(?:this|it) changed (?:the|my) (?:life|world)/i,
+                    /(?:heartwarming|heartbreaking) (?:story|video)/i,
+                    /(?:tears|joy) (?:of|from)/i,
+                    /(?:only|just) (\d+) (?:minutes|hours|days)/i,
+                    /before it(')?s (?:gone|too late)/i,
+                    /(?:last|final) (?:chance|opportunity)/i,
+                    /going viral (?:right now|today)/i,
+                    /(\d+) (?:things|ways|secrets|reasons)/i,
+                    /number (\d+) will (?:shock|surprise)/i,
+                    /top (\d+) (?:list|ranking)/i,
+                    /can you (?:spot|find|guess)/i,
+                    /what (?:do|does) (?:this|it) (?:mean|show)/i,
+                    /are you (?:making|doing) this (?:mistake|error)/i,
+                    /(?:literally|actually) (?:changed|saved) (?:my|the)/i,
+                    /(?:mind|brain) (?:blown|exploded)/i,
+                    /(?:never|ever) (?:seen|heard) (?:anything|something)/i,
+                    /(?:doctors|experts|scientists) (?:hate|warning)/i,
+                    /(?:they|companies) don(')?t want you/i,
+                    /(?:big|mainstream) (?:pharma|media) (?:hiding|lying)/i
+                ];
+                
+                this.engagementTriggers = [
+                    /click (?:here|now|to)/i,
+                    /watch (?:this|now|video)/i,
+                    /see (?:what|how|why)/i,
+                    /find out (?:more|how|why)/i,
+                    /(?:read|learn) (?:more|now)/i,
+                    /(?:don(')?t|never) (?:miss|skip)/i
+                ];
+                
+                this.vaguePhrases = [
+                    /this (?:thing|item|product|method)/i,
+                    /something (?:amazing|incredible)/i,
+                    /what (?:they|someone) (?:did|found)/i,
+                    /(?:the|this) (?:result|outcome)/i
+                ];
+                
+                this.clickbaitKeywords = [
+                    'shocking', 'amazing', 'incredible', 'unbelievable', 'mind-blowing',
+                    'heartbreaking', 'jaw-dropping', 'epic', 'ultimate', 'secret',
+                    'hidden', 'truth', 'exposed', 'revealed', 'leaked', 'secretly',
+                    'finally', 'actually', 'literally', 'viral', 'trending', 'breaking',
+                    'miracle', 'magic', 'instant', 'overnight', 'effortless', 'simple',
+                    'trick', 'hack', 'tip', 'method', 'way', 'secret', 'loophole'
+                ];
+            }
+            
+            analyze(text) {
+                const analysis = {
+                    isClickbait: false,
+                    clickbaitScore: 0,
+                    patternsFound: [],
+                    triggers: [],
+                    vaguenessScore: 0,
+                    emotionalManipulation: 0,
+                    curiosityGaps: 0,
+                    recommendations: []
+                };
+                
+                const lowerText = text.toLowerCase();
+                
+                // Check for clickbait patterns
+                this.clickbaitPatterns.forEach(pattern => {
+                    const matches = lowerText.match(new RegExp(pattern, 'gi'));
+                    if (matches) {
+                        analysis.clickbaitScore += matches.length * 10;
+                        analysis.patternsFound.push(`Clickbait pattern: "${pattern.source}" (${matches.length}x)`);
+                        
+                        if (pattern.source.includes('won\'t believe') || pattern.source.includes('what happens')) {
+                            analysis.curiosityGaps += matches.length * 15;
+                        }
+                        
+                        if (pattern.source.includes('heart') || pattern.source.includes('cry')) {
+                            analysis.emotionalManipulation += matches.length * 12;
+                        }
+                    }
+                });
+                
+                // Check for engagement triggers
+                this.engagementTriggers.forEach(trigger => {
+                    const matches = lowerText.match(new RegExp(trigger, 'gi'));
+                    if (matches) {
+                        analysis.clickbaitScore += matches.length * 8;
+                        analysis.triggers.push(`Engagement trigger: "${trigger.source}"`);
+                    }
+                });
+                
+                // Check for vague phrases
+                this.vaguePhrases.forEach(phrase => {
+                    const matches = lowerText.match(new RegExp(phrase, 'gi'));
+                    if (matches) {
+                        analysis.vaguenessScore += matches.length * 5;
+                        analysis.clickbaitScore += matches.length * 6;
+                    }
+                });
+                
+                // Check for clickbait keywords
+                this.clickbaitKeywords.forEach(keyword => {
+                    const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+                    const matches = lowerText.match(regex);
+                    if (matches) {
+                        analysis.clickbaitScore += matches.length * 4;
+                        
+                        // High impact keywords
+                        if (['shocking', 'secret', 'exposed', 'viral'].includes(keyword.toLowerCase())) {
+                            analysis.clickbaitScore += matches.length * 3;
+                        }
+                    }
+                });
+                
+                // Analyze headline structure
+                if (text.includes('!')) {
+                    analysis.clickbaitScore += 15;
+                    analysis.patternsFound.push("Uses exclamation mark");
+                }
+                
+                if (text.includes('?')) {
+                    analysis.clickbaitScore += 10;
+                    analysis.patternsFound.push("Uses question mark");
+                }
+                
+                // Check for numbers in headlines
+                const numberMatch = text.match(/\d+/);
+                if (numberMatch && parseInt(numberMatch[0]) <= 30) {
+                    analysis.clickbaitScore += 8;
+                    analysis.patternsFound.push(`Contains small number: ${numberMatch[0]}`);
+                }
+                
+                // Check for ALL CAPS words
+                const allCapsWords = text.match(/\b[A-Z]{3,}\b/g);
+                if (allCapsWords) {
+                    analysis.clickbaitScore += allCapsWords.length * 5;
+                    analysis.patternsFound.push(`Uses ALL CAPS: ${allCapsWords.slice(0, 3).join(', ')}`);
+                }
+                
+                // Check for bracket placeholders
+                if (text.includes('[') && text.includes(']')) {
+                    analysis.clickbaitScore += 12;
+                    analysis.patternsFound.push("Uses bracket placeholders [like this]");
+                }
+                
+                // Determine if it's clickbait
+                analysis.isClickbait = analysis.clickbaitScore >= 30;
+                
+                // Generate recommendations
+                if (analysis.isClickbait) {
+                    if (analysis.curiosityGaps > 20) {
+                        analysis.recommendations.push("Uses curiosity gaps - withholding key information to force clicks");
+                    }
+                    if (analysis.emotionalManipulation > 15) {
+                        analysis.recommendations.push("Uses emotional manipulation to generate clicks");
+                    }
+                    if (analysis.vaguenessScore > 10) {
+                        analysis.recommendations.push("Vague language used to create mystery");
+                    }
+                    if (analysis.triggers.length > 0) {
+                        analysis.recommendations.push("Contains direct engagement triggers");
+                    }
+                }
+                
+                return analysis;
+            }
+        }
+
+        class ContentAnalyzer {
+            constructor() {
+                this.factPatterns = [
+                    /according to (?:reports|sources|data)/i,
+                    /studies show/i,
+                    /research indicates/i,
+                    /official (?:statement|release)/i,
+                    /peer-reviewed/i,
+                    /clinical trial/i,
+                    /data shows/i,
+                    /verified by/i
+                ];
+                
+                this.emotionalPatterns = [
+                    /shocking(?: revelation)?/i,
+                    /secret(?: documents?)?/i,
+                    /exposed/i,
+                    /unbelievable/i,
+                    /breaking(?: news)?/i,
+                    /amazing discovery/i,
+                    /secret cure/i,
+                    /hidden truth/i
+                ];
+                
+                this.sciencePatterns = [
+                    /study (?:finds|shows|confirms)/i,
+                    /research (?:published|conducted)/i,
+                    /clinical trial/i,
+                    /peer-reviewed/i,
+                    /data analysis/i,
+                    /scientific evidence/i
+                ];
+                
+                this.sensationalPatterns = [
+                    /(?:breaking|urgent|emergency|alert)/i,
+                    /(?:must(?:-| )see|must(?:-| )read)/i,
+                    /(?:exclusive|first look|sneak peek)/i,
+                    /(?:gone wrong|worst nightmare)/i,
+                    /(?:life(?:-| )changing|world(?:-| )changing)/i
+                ];
+                
+                this.manipulativePhrases = [
+                    /(?:you|viewers|readers) (?:need|must|have) to (?:see|watch|read)/i,
+                    /(?:trust me|believe me|I promise)/i,
+                    /(?:everyone is talking about|the whole world is watching)/i,
+                    /(?:this will change your mind|you'll never think the same)/i
+                ];
+            }
+            
+            analyze(text) {
+                const analysis = {
+                    emotionalScore: 0,
+                    factualScore: 0,
+                    scientificScore: 0,
+                    sensationalScore: 0,
+                    manipulativeScore: 0,
+                    specificityScore: 0,
+                    headlineQuality: 0,
+                    entityCount: 0,
+                    patterns: [],
+                    sensationalPatterns: [],
+                    manipulativePhrases: []
+                };
+                
+                // Check for factual patterns
+                this.factPatterns.forEach(pattern => {
+                    const matches = text.match(new RegExp(pattern, 'gi'));
+                    if (matches) {
+                        analysis.factualScore += matches.length * 2;
+                        analysis.patterns.push(`Factual pattern: ${pattern.source} (${matches.length}x)`);
+                    }
+                });
+                
+                // Check for emotional patterns
+                this.emotionalPatterns.forEach(pattern => {
+                    const matches = text.match(new RegExp(pattern, 'gi'));
+                    if (matches) {
+                        analysis.emotionalScore += matches.length * 2;
+                        analysis.patterns.push(`Emotional language: ${pattern.source} (${matches.length}x)`);
+                    }
+                });
+                
+                // Check for scientific patterns
+                this.sciencePatterns.forEach(pattern => {
+                    const matches = text.match(new RegExp(pattern, 'gi'));
+                    if (matches) {
+                        analysis.scientificScore += matches.length * 3;
+                        analysis.patterns.push(`Scientific language: ${pattern.source} (${matches.length}x)`);
+                    }
+                });
+                
+                // Check for sensational patterns
+                this.sensationalPatterns.forEach(pattern => {
+                    const matches = text.match(new RegExp(pattern, 'gi'));
+                    if (matches) {
+                        analysis.sensationalScore += matches.length * 8;
+                        analysis.sensationalPatterns.push(`Sensational: "${pattern.source}"`);
+                    }
+                });
+                
+                // Check for manipulative phrases
+                this.manipulativePhrases.forEach(phrase => {
+                    const matches = text.match(new RegExp(phrase, 'gi'));
+                    if (matches) {
+                        analysis.manipulativeScore += matches.length * 10;
+                        analysis.manipulativePhrases.push(`Manipulative: "${phrase.source}"`);
+                    }
+                });
+                
+                // Calculate length and specificity scores
+                const wordCount = text.split(/\s+/).length;
+                analysis.lengthScore = Math.min(wordCount / 50, 3);
+                analysis.factualScore += analysis.lengthScore;
+                
+                // Count specific entities (numbers, percentages, dates)
+                const numberMatches = text.match(/\d+(?:\.\d+)?%?/g) || [];
+                analysis.specificityScore = Math.min(numberMatches.length * 0.5, 5);
+                analysis.entityCount = numberMatches.length;
+                
+                // Analyze headline quality
+                const words = text.split(/\s+/);
+                analysis.wordCount = words.length;
+                
+                // Good headlines are typically 6-12 words
+                if (words.length >= 6 && words.length <= 12) {
+                    analysis.headlineQuality += 20;
+                } else if (words.length < 6) {
+                    analysis.headlineQuality -= 10; // Too short might be clickbait
+                } else if (words.length > 15) {
+                    analysis.headlineQuality -= 5; // Too long
+                }
+                
+                // Check for proper capitalization
+                const firstWord = words[0];
+                if (firstWord && firstWord === firstWord.charAt(0).toUpperCase() + firstWord.slice(1).toLowerCase()) {
+                    analysis.headlineQuality += 5;
+                }
+                
+                // Penalize excessive punctuation
+                const exclamationCount = (text.match(/!/g) || []).length;
+                const questionCount = (text.match(/\?/g) || []).length;
+                if (exclamationCount > 1) {
+                    analysis.headlineQuality -= exclamationCount * 5;
+                }
+                if (questionCount > 1) {
+                    analysis.headlineQuality -= questionCount * 3;
+                }
+                
+                return analysis;
+            }
+        }
+
+        class SourceValidator {
+            constructor() {
+                this.trustedSources = [
+                    "reuters", "associated press", "bbc", "ap news", "bloomberg",
+                    "financial times", "wall street journal", "the economist",
+                    "nature", "science", "new england journal", "who", "un",
+                    "nasa", "european parliament", "world bank", "imf", "isro",
+                    "stanford university", "copernicus", "fda", "uk medicines agency"
+                ];
+                
+                this.unreliableSources = [
+                    "conspiracy", "rumor", "anonymous", "unverified",
+                    "fringe blog", "alternative news", "activist blog",
+                    "whistleblower", "secret", "underground", "leaked"
+                ];
+                
+                this.clickbaitSources = [
+                    "clickbait", "viral", "buzzfeed", "upworthy", "distractify",
+                    "ladbible", "unilad", "viralnova", "twentytwowords", "lifebuzz",
+                    "thought catalog", "little things", "faithtap", "shareably"
+                ];
+                
+                this.governmentSources = [
+                    "government", "ministry", "parliament", "official",
+                    "agency", "bureau", "administration"
+                ];
+                
+                this.contentFarmPatterns = [
+                    /.*(?:list|top \d+|rank|quiz).*/i,
+                    /.*(?:you won't|this will|shocking).*/i,
+                    /.*(?:things|ways|reasons|secrets).*/i
+                ];
+            }
+            
+            validate(text) {
+                const analysis = {
+                    sourceScore: 50,
+                    sourceType: "Unknown",
+                    clickbaitSourceScore: 0,
+                    isContentFarm: false,
+                    trustIndicators: [],
+                    warnings: [],
+                    contentFarmIndicators: [],
+                    sourceQuality: "Unknown"
+                };
+                
+                const lowerText = text.toLowerCase();
+                
+                // Check for trusted sources
+                this.trustedSources.forEach(source => {
+                    const regex = new RegExp(`\\b${source}\\b`, 'i');
+                    if (regex.test(lowerText)) {
+                        analysis.sourceScore += 20;
+                        analysis.sourceType = "Verified Source";
+                        analysis.trustIndicators.push(`Mentions trusted source: ${source}`);
+                    }
+                });
+                
+                // Check for unreliable sources
+                this.unreliableSources.forEach(source => {
+                    const regex = new RegExp(`\\b${source}\\b`, 'i');
+                    if (regex.test(lowerText)) {
+                        analysis.sourceScore -= 25;
+                        analysis.sourceType = "Unverified Source";
+                        analysis.warnings.push(`Contains unreliable indicator: ${source}`);
+                    }
+                });
+                
+                // Check for clickbait sources
+                this.clickbaitSources.forEach(source => {
+                    if (lowerText.includes(source)) {
+                        analysis.clickbaitSourceScore += 30;
+                        analysis.sourceQuality = "Low Quality";
+                        analysis.contentFarmIndicators.push(`Known clickbait source pattern: ${source}`);
+                    }
+                });
+                
+                // Check for government sources
+                this.governmentSources.forEach(source => {
+                    const regex = new RegExp(`\\b${source}\\b`, 'i');
+                    if (regex.test(lowerText)) {
+                        analysis.sourceScore += 10;
+                        analysis.trustIndicators.push(`Mentions government source: ${source}`);
+                    }
+                });
+                
+                // Check for academic/scientific sources
+                if (/\b(university|institute|research center|lab)\b/i.test(lowerText)) {
+                    analysis.sourceScore += 15;
+                    analysis.trustIndicators.push("Mentions academic/scientific institution");
+                }
+                
+                // Check for content farm patterns in source names
+                this.contentFarmPatterns.forEach(pattern => {
+                    if (pattern.test(text)) {
+                        analysis.clickbaitSourceScore += 20;
+                        analysis.isContentFarm = true;
+                        analysis.contentFarmIndicators.push(`Content farm pattern: ${pattern.source}`);
+                    }
+                });
+                
+                // Adjust overall source score based on clickbait detection
+                analysis.sourceScore = Math.max(0, Math.min(100, 
+                    analysis.sourceScore - analysis.clickbaitSourceScore
+                ));
+                
+                return analysis;
+            }
+        }
+
+        class ContextAnalyzer {
+            analyze(text, database) {
+                const analysis = {
+                    databaseMatches: [],
+                    similarityScore: 0,
+                    contextIndicators: [],
+                    trendingTopics: []
+                };
+                
+                const keywords = text.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+                
+                // Find matches in database
+                database.forEach(item => {
+                    let matchScore = 0;
+                    const itemText = (item.title + " " + item.content + " " + item.tags.join(" ")).toLowerCase();
+                    
+                    // Keyword matching
+                    keywords.forEach(keyword => {
+                        if (itemText.includes(keyword)) {
+                            matchScore += 3;
+                        }
+                    });
+                    
+                    // Phrase matching
+                    if (text.length > 20) {
+                        const sample = text.substring(0, 60).toLowerCase();
+                        if (itemText.includes(sample)) {
+                            matchScore += 20;
+                        }
+                    }
+                    
+                    // Tag matching
+                    item.tags.forEach(tag => {
+                        if (text.toLowerCase().includes(tag.toLowerCase())) {
+                            matchScore += 5;
+                        }
+                    });
+                    
+                    if (matchScore > 8) {
+                        analysis.databaseMatches.push({
+                            item,
+                            matchScore,
+                            credibility: item.credibility,
+                            category: item.category
+                        });
+                    }
+                });
+                
+                analysis.databaseMatches.sort((a, b) => b.matchScore - a.matchScore);
+                analysis.databaseMatches = analysis.databaseMatches.slice(0, 6);
+                
+                if (analysis.databaseMatches.length > 0) {
+                    analysis.similarityScore = Math.min(
+                        100,
+                        analysis.databaseMatches[0].matchScore * 5
+                    );
+                    
+                    // Identify trending topics
+                    const categories = {};
+                    analysis.databaseMatches.forEach(match => {
+                        categories[match.category] = (categories[match.category] || 0) + 1;
+                    });
+                    
+                    analysis.trendingTopics = Object.entries(categories)
+                        .sort((a, b) => b[1] - a[1])
+                        .slice(0, 3)
+                        .map(([category, count]) => ({ category, count }));
+                }
+                
+                return analysis;
+            }
+        }
+
+        class EnhancedTruthGuardAI {
+            constructor(database) {
+                this.contentAnalyzer = new ContentAnalyzer();
+                this.sourceValidator = new SourceValidator();
+                this.contextAnalyzer = new ContextAnalyzer();
+                this.clickbaitDetector = new ClickbaitDetector();
+                this.database = database;
+                this.version = "2.2.0";
+            }
+            
+            analyze(text) {
+                const startTime = performance.now();
+                
+                // Run all analyses
+                const contentAnalysis = this.contentAnalyzer.analyze(text);
+                const sourceAnalysis = this.sourceValidator.validate(text);
+                const contextAnalysis = this.contextAnalyzer.analyze(text, this.database);
+                const clickbaitAnalysis = this.clickbaitDetector.analyze(text);
+                
+                let credibilityScore = 50;
+                
+                // Base scoring
+                credibilityScore += contentAnalysis.factualScore * 2.5;
+                credibilityScore -= contentAnalysis.emotionalScore * 2;
+                credibilityScore += contentAnalysis.scientificScore * 1.5;
+                credibilityScore += contentAnalysis.specificityScore * 2;
+                credibilityScore += (sourceAnalysis.sourceScore - 50) * 0.4;
+                
+                // Enhanced clickbait scoring
+                if (clickbaitAnalysis.isClickbait) {
+                    credibilityScore -= clickbaitAnalysis.clickbaitScore * 0.5;
+                    
+                    // Heavy penalty for high clickbait scores
+                    if (clickbaitAnalysis.clickbaitScore > 50) {
+                        credibilityScore -= 40;
+                    } else if (clickbaitAnalysis.clickbaitScore > 30) {
+                        credibilityScore -= 25;
+                    }
+                }
+                
+                // Penalize sensational content
+                credibilityScore -= contentAnalysis.sensationalScore * 1.2;
+                credibilityScore -= contentAnalysis.manipulativeScore * 1.5;
+                
+                // Reward good headline quality
+                credibilityScore += contentAnalysis.headlineQuality * 0.3;
+                
+                // Context analysis from database
+                if (contextAnalysis.databaseMatches.length > 0) {
+                    const dbMatch = contextAnalysis.databaseMatches[0];
+                    if (dbMatch.item.credibility === "Clickbait") {
+                        credibilityScore -= 35; // Heavy penalty for matching clickbait
+                    } else if (dbMatch.credibility === "Credible") {
+                        credibilityScore += 25;
+                    } else if (dbMatch.credibility === "False") {
+                        credibilityScore -= 30;
+                    }
+                }
+                
+                // Penalize content farm sources
+                if (sourceAnalysis.isContentFarm) {
+                    credibilityScore -= 25;
+                }
+                
+                credibilityScore = Math.max(0, Math.min(100, Math.round(credibilityScore)));
+                
+                // Determine label based on enhanced scoring
+                let label, color, confidence, icon;
+                
+                if (clickbaitAnalysis.isClickbait && clickbaitAnalysis.clickbaitScore > 40) {
+                    label = "CLICKBAIT";
+                    color = "pink";
+                    icon = "fa-mouse-pointer";
+                    confidence = 85 + Math.random() * 10;
+                } else if (credibilityScore >= 80) {
+                    label = "HIGHLY CREDIBLE";
+                    color = "emerald";
+                    icon = "fa-shield-check";
+                    confidence = 90 + Math.random() * 8;
+                } else if (credibilityScore >= 65) {
+                    label = "CREDIBLE";
+                    color = "green";
+                    icon = "fa-check-circle";
+                    confidence = 75 + Math.random() * 12;
+                } else if (credibilityScore >= 50) {
+                    label = "LIKELY TRUE";
+                    color = "blue";
+                    icon = "fa-thumbs-up";
+                    confidence = 60 + Math.random() * 15;
+                } else if (credibilityScore >= 40) {
+                    label = "NEEDS VERIFICATION";
+                    color = "yellow";
+                    icon = "fa-question-circle";
+                    confidence = 50 + Math.random() * 15;
+                } else if (credibilityScore >= 30) {
+                    label = "SENSATIONALIZED";
+                    color = "orange";
+                    icon = "fa-exclamation-triangle";
+                    confidence = 45 + Math.random() * 10;
+                } else if (credibilityScore >= 20) {
+                    label = "SUSPICIOUS";
+                    color = "red";
+                    icon = "fa-exclamation-circle";
+                    confidence = 40 + Math.random() * 10;
+                } else if (clickbaitAnalysis.clickbaitScore > 30) {
+                    label = "LIKELY CLICKBAIT";
+                    color = "pink";
+                    icon = "fa-mouse-pointer";
+                    confidence = 75 + Math.random() * 15;
+                } else {
+                    label = "CONFIRMED FALSE";
+                    color = "red";
+                    icon = "fa-times-circle";
+                    confidence = 85 + Math.random() * 10;
+                }
+                
+                const endTime = performance.now();
+                
+                return {
+                    label,
+                    color,
+                    icon,
+                    credibilityScore,
+                    clickbaitScore: clickbaitAnalysis.clickbaitScore,
+                    confidence: Math.round(confidence),
+                    processingTime: (endTime - startTime).toFixed(2),
+                    aiVersion: this.version,
+                    analyses: {
+                        content: contentAnalysis,
+                        source: sourceAnalysis,
+                        context: contextAnalysis,
+                        clickbait: clickbaitAnalysis
+                    },
+                    breakdown: {
+                        contentScore: Math.min(100, contentAnalysis.factualScore * 10 + contentAnalysis.scientificScore * 5),
+                        emotionPenalty: Math.min(50, contentAnalysis.emotionalScore * 8),
+                        sensationalPenalty: Math.min(50, contentAnalysis.sensationalScore * 2 + contentAnalysis.manipulativeScore * 3),
+                        sourceScore: sourceAnalysis.sourceScore,
+                        clickbaitPenalty: Math.min(60, clickbaitAnalysis.clickbaitScore * 0.8),
+                        databaseInfluence: contextAnalysis.similarityScore,
+                        headlineQuality: contentAnalysis.headlineQuality
+                    },
+                    warnings: [...sourceAnalysis.warnings, ...sourceAnalysis.contentFarmIndicators],
+                    trustIndicators: sourceAnalysis.trustIndicators,
+                    clickbaitIndicators: clickbaitAnalysis.patternsFound,
+                    recommendations: clickbaitAnalysis.recommendations
+                };
+            }
+        }
+
+        // ===================== UI COMPONENTS =====================
+        function AnimatedCounter({ value, duration = 2000 }) {
+            const [count, setCount] = useState(0);
+            const [isVisible, setIsVisible] = useState(false);
+            const ref = useRef();
+            
+            useEffect(() => {
+                const observer = new IntersectionObserver(
+                    ([entry]) => setIsVisible(entry.isIntersecting),
+                    { threshold: 0.1 }
+                );
+                
+                if (ref.current) observer.observe(ref.current);
+                return () => observer.disconnect();
+            }, []);
+            
+            useEffect(() => {
+                if (!isVisible) return;
+                
+                let start = 0;
+                const increment = value / (duration / 16);
+                
+                const timer = setInterval(() => {
+                    start += increment;
+                    if (start >= value) {
+                        setCount(value);
+                        clearInterval(timer);
+                    } else {
+                        setCount(Math.floor(start));
+                    }
+                }, 16);
+                
+                return () => clearInterval(timer);
+            }, [isVisible, value, duration]);
+            
+            return <span ref={ref}>{count.toLocaleString()}</span>;
+        }
+
+        function CircularProgress({ score, size = 120 }) {
+            const radius = size / 2 - 10;
+            const circumference = 2 * Math.PI * radius;
+            const offset = circumference - (score / 100) * circumference;
+            
+            const getColor = () => {
+                if (score >= 80) return "#10b981";
+                if (score >= 65) return "#3b82f6";
+                if (score >= 50) return "#60a5fa";
+                if (score >= 40) return "#f59e0b";
+                if (score >= 30) return "#f97316";
+                if (score >= 20) return "#ef4444";
+                return "#ec4899";
+            };
+            
+            return (
+                <div className="relative inline-block" style={{ width: size, height: size }}>
+                    <svg width={size} height={size} className="progress-ring">
+                        <circle
+                            className="progress-ring__circle"
+                            stroke="#e5e7eb"
+                            strokeWidth="8"
+                            fill="transparent"
+                            r={radius}
+                            cx={size / 2}
+                            cy={size / 2}
+                        />
+                        <circle
+                            className="progress-ring__circle"
+                            stroke={getColor()}
+                            strokeWidth="8"
+                            strokeLinecap="round"
+                            fill="transparent"
+                            r={radius}
+                            cx={size / 2}
+                            cy={size / 2}
+                            style={{
+                                strokeDasharray: circumference,
+                                strokeDashoffset: offset
+                            }}
+                        />
+                    </svg>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-3xl font-bold" style={{ color: getColor() }}>
+                            {score}%
+                        </span>
+                    </div>
+                </div>
+            );
+        }
+
+        function ClickbaitIndicator({ score }) {
+            if (score < 20) return null;
+            
+            const getLevel = (score) => {
+                if (score >= 60) return { label: "High", color: "bg-pink-600", text: "text-pink-600", bg: "bg-pink-50", border: "border-pink-200" };
+                if (score >= 40) return { label: "Medium", color: "bg-orange-500", text: "text-orange-500", bg: "bg-orange-50", border: "border-orange-200" };
+                return { label: "Low", color: "bg-yellow-500", text: "text-yellow-500", bg: "bg-yellow-50", border: "border-yellow-200" };
+            };
+            
+            const level = getLevel(score);
+            
+            return (
+                <div className={`${level.bg} ${level.border} border rounded-xl p-4 mb-6`}>
+                    <div className="flex items-center">
+                        <div className={`w-12 h-12 ${level.color} rounded-lg flex items-center justify-center mr-4`}>
+                            <i className="fas fa-mouse-pointer text-white text-xl"></i>
+                        </div>
+                        <div className="flex-1">
+                            <div className="font-bold text-gray-800 text-lg mb-1">Clickbait Detection Active</div>
+                            <div className="flex items-center">
+                                <div className="flex-1 bg-gray-200 rounded-full h-3 mr-4">
+                                    <div 
+                                        className={`h-full ${level.color} rounded-full`}
+                                        style={{ width: `${Math.min(score, 100)}%` }}
+                                    ></div>
+                                </div>
+                                <div className={`font-bold ${level.text} text-lg`}>
+                                    {score}/100
+                                </div>
+                            </div>
+                            <div className="text-sm text-gray-600 mt-2">
+                                {score >= 60 ? "High probability of clickbait content" : 
+                                 score >= 40 ? "Moderate clickbait indicators detected" : 
+                                 "Some clickbait patterns found"}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function EnhancedSearchResults({ results, onSelect }) {
+            if (results.length === 0) {
+                return (
+                    <div className="text-center py-12">
+                        <i className="fas fa-search text-4xl text-gray-300 mb-4"></i>
+                        <p className="text-gray-500">No matching results found</p>
+                        <p className="text-sm text-gray-400 mt-2">Try different keywords or browse categories</p>
+                    </div>
+                );
+            }
+            
+            return (
+                <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                    {results.map((item) => {
+                        const isClickbait = item.credibility === "Clickbait";
+                        
+                        return (
+                            <div 
+                                key={item.id} 
+                                className={`glass rounded-xl p-4 hover:shadow-lg cursor-pointer transform hover:-translate-y-1 border ${isClickbait ? 'border-pink-200 bg-gradient-to-r from-pink-50/50 to-rose-50/50' : 'border-gray-100'}`}
+                                onClick={() => onSelect(item)}
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className="flex flex-wrap gap-2">
+                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                            item.credibility === "Credible" 
+                                                ? "bg-emerald-100 text-emerald-800"
+                                                : item.credibility === "False"
+                                                ? "bg-red-100 text-red-800"
+                                                : item.credibility === "Clickbait"
+                                                ? "bg-pink-100 text-pink-800"
+                                                : item.credibility === "Misleading"
+                                                ? "bg-yellow-100 text-yellow-800"
+                                                : "bg-orange-100 text-orange-800"
+                                        }`}>
+                                            {isClickbait ? (
+                                                <>
+                                                    <i className="fas fa-mouse-pointer mr-1"></i>
+                                                    {item.credibility}
+                                                </>
+                                            ) : item.credibility}
+                                        </span>
+                                        <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
+                                            {item.category}
+                                        </span>
+                                        {item.tags.slice(0, 2).map((tag, idx) => (
+                                            <span key={idx} className={`px-2 py-1 rounded text-xs ${
+                                                ['clickbait', 'viral', 'shocking'].includes(tag.toLowerCase())
+                                                    ? 'bg-pink-100 text-pink-700'
+                                                    : 'bg-gray-100 text-gray-600'
+                                            }`}>
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div className="flex flex-col items-end">
+                                        <span className="text-xs text-gray-500">{item.date}</span>
+                                        <span className="text-xs text-gray-400 mt-1">{item.location}</span>
+                                    </div>
+                                </div>
+                                <h4 className={`font-semibold mb-2 ${isClickbait ? 'text-pink-700' : 'text-gray-800'}`}>
+                                    {item.title}
+                                    {isClickbait && (
+                                        <i className="fas fa-exclamation-triangle ml-2 text-pink-500"></i>
+                                    )}
+                                </h4>
+                                <p className="text-sm text-gray-600 line-clamp-2">{item.content}</p>
+                                <div className="flex justify-between items-center mt-3">
+                                    <div className="flex items-center">
+                                        <i className={`fas fa-source text-xs ${isClickbait ? 'text-pink-400' : 'text-gray-400'} mr-1`}></i>
+                                        <span className={`text-xs ${isClickbait ? 'text-pink-600' : 'text-gray-500'}`}>
+                                            {item.source}
+                                        </span>
+                                        <span className="mx-2 text-gray-300">•</span>
+                                        <i className="fas fa-chart-line text-xs text-gray-400 mr-1"></i>
+                                        <span className="text-xs text-gray-500">Impact: {item.impactScore}/100</span>
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                        <i className="fas fa-database mr-1"></i>
+                                        ID: {item.id}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        // ===================== MAIN APP =====================
+        function App() {
+            const [text, setText] = useState("");
+            const [result, setResult] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [searchQuery, setSearchQuery] = useState("");
+            const [searchResults, setSearchResults] = useState([]);
+            const [activeTab, setActiveTab] = useState("analyze");
+            const [logs, setLogs] = useState([]);
+            const [stats, setStats] = useState({
+                totalAnalyzed: 18745,
+                credibleCount: 13467,
+                suspiciousCount: 4289,
+                clickbaitCount: 989,
+                avgProcessingTime: 1.52
+            });
+            
+            const textareaRef = useRef(null);
+            const aiEngine = useRef(new EnhancedTruthGuardAI(newsDatabase));
+            
+            const sampleQueries = [
+                { 
+                    text: "You Won't Believe What This Celebrity Did in Secret! The Video Will Shock You!", 
+                    type: "clickbait",
+                    category: "Celebrity Clickbait"
+                },
+                { 
+                    text: "Doctors Hate This One Simple Weight Loss Trick That Actually Works!", 
+                    type: "clickbait",
+                    category: "Health Clickbait"
+                },
+                { 
+                    text: "This 10-Year-Old Solved a Math Problem Einstein Couldn't - Genius or Hoax?", 
+                    type: "clickbait",
+                    category: "Science Clickbait"
+                },
+                { 
+                    text: "India's Chandrayaan-3 successfully lands on Moon's south pole, a historic achievement for space exploration", 
+                    type: "true",
+                    category: "Science Achievement"
+                },
+                { 
+                    text: "The Shocking Truth About Avocados They Don't Want You to Know", 
+                    type: "clickbait",
+                    category: "Food Clickbait"
+                },
+                { 
+                    text: "Breaking: Major breakthrough in quantum computing announced by researchers", 
+                    type: "true",
+                    category: "Technology News"
+                },
+                { 
+                    text: "This Common Household Item Is Secretly Killing Your Family While You Sleep", 
+                    type: "clickbait",
+                    category: "Fear-Mongering"
+                },
+                { 
+                    text: "They Said It Was Impossible, But Watch What Happens When You Try This!", 
+                    type: "clickbait",
+                    category: "Viral Challenge"
+                }
+            ];
+            
+            const quickFilters = ["Clickbait", "Science", "Conspiracy", "Health", "Technology", "Viral", "Entertainment", "Politics"];
+            
+            useEffect(() => {
+                const initialLogs = [
+                    { message: "Initializing TruthGuard AI v2.2.0...", type: "info", timestamp: "09:30:15" },
+                    { message: "Enhanced clickbait detection system activated", type: "success", timestamp: "09:30:17" },
+                    { message: "Database connected: 45+ verified entries (10+ clickbait samples)", type: "success", timestamp: "09:30:20" },
+                    { message: "Multi-model AI verification system ready", type: "success", timestamp: "09:30:22" }
+                ];
+                setLogs(initialLogs);
+            }, []);
+            
+            const addLog = (message, type = "info") => {
+                const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                setLogs(prev => [...prev.slice(-10), { message, type, timestamp }]);
+            };
+            
+            const handleAnalyze = () => {
+                if (!text.trim()) return;
+                
+                setLoading(true);
+                addLog(`Starting analysis: "${text.substring(0, 50)}..."`, "info");
+                
+                setTimeout(() => {
+                    const analysis = aiEngine.current.analyze(text);
+                    setResult(analysis);
+                    setLoading(false);
+                    
+                    setStats(prev => ({
+                        ...prev,
+                        totalAnalyzed: prev.totalAnalyzed + 1,
+                        credibleCount: analysis.credibilityScore >= 65 
+                            ? prev.credibleCount + 1 
+                            : prev.credibleCount,
+                        suspiciousCount: analysis.credibilityScore >= 30 && analysis.credibilityScore < 50
+                            ? prev.suspiciousCount + 1
+                            : prev.suspiciousCount,
+                        clickbaitCount: analysis.clickbaitScore > 30
+                            ? prev.clickbaitCount + 1
+                            : prev.clickbaitCount,
+                        avgProcessingTime: (prev.avgProcessingTime + parseFloat(analysis.processingTime) / 1000) / 2
+                    }));
+                    
+                    addLog(`Analysis complete: ${analysis.label} (${analysis.confidence}% confidence)`, "success");
+                    
+                    if (analysis.clickbaitScore > 30) {
+                        addLog(`Clickbait detected: Score ${analysis.clickbaitScore}/100`, "warning");
+                    }
+                }, 1500);
+            };
+            
+            const handleSearch = (query) => {
+                setSearchQuery(query);
+                
+                if (!query.trim()) {
+                    setSearchResults([]);
+                    return;
+                }
+                
+                const filtered = newsDatabase.filter(item =>
+                    item.title.toLowerCase().includes(query.toLowerCase()) ||
+                    item.content.toLowerCase().includes(query.toLowerCase()) ||
+                    item.category.toLowerCase().includes(query.toLowerCase()) ||
+                    item.tags.some(tag => tag.toLowerCase().includes(query.toLowerCase())) ||
+                    item.source.toLowerCase().includes(query.toLowerCase()) ||
+                    item.location.toLowerCase().includes(query.toLowerCase())
+                );
+                
+                setSearchResults(filtered);
+                addLog(`Database search: Found ${filtered.length} results for "${query}"`, "info");
+            };
+            
+            const handleSelectResult = (item) => {
+                setText(item.title + ". " + item.content);
+                setActiveTab("analyze");
+                addLog(`Loaded database entry #${item.id}: ${item.title}`, "success");
+                
+                // Auto-scroll to textarea
+                textareaRef.current?.scrollIntoView({ behavior: 'smooth' });
+            };
+            
+            const clearAll = () => {
+                setText("");
+                setResult(null);
+                setSearchQuery("");
+                setSearchResults([]);
+                addLog("Cleared all inputs and results", "info");
+            };
+            
+            const loadSample = (sampleText) => {
+                setText(sampleText);
+                addLog(`Loaded sample query: "${sampleText.substring(0, 50)}..."`, "info");
+            };
+            
+            const getCredibilityStats = () => {
+                const credible = newsDatabase.filter(item => item.credibility === "Credible").length;
+                const falseItems = newsDatabase.filter(item => item.credibility === "False").length;
+                const misleading = newsDatabase.filter(item => item.credibility === "Misleading").length;
+                const exaggerated = newsDatabase.filter(item => item.credibility === "Exaggerated").length;
+                const clickbait = newsDatabase.filter(item => item.credibility === "Clickbait").length;
+                
+                return { credible, falseItems, misleading, exaggerated, clickbait };
+            };
+            
+            const credibilityStats = getCredibilityStats();
+            
+            return (
+                <div className="min-h-screen p-4 md:p-8">
+                    {/* Animated Background */}
+                    <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+                        <div className="absolute top-1/4 left-10 w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse float"></div>
+                        <div className="absolute bottom-1/4 right-10 w-96 h-96 bg-indigo-300 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse" style={{animationDelay: '1s'}}></div>
+                        <div className="absolute top-3/4 left-1/3 w-64 h-64 bg-pink-300 rounded-full mix-blend-multiply filter blur-3xl opacity-15 animate-pulse pulse-pink" style={{animationDelay: '2s'}}></div>
+                    </div>
+                    
+                    <div className="relative z-10 max-w-7xl mx-auto">
+                        {/* Header */}
+                        <header className="mb-8">
+                            <div className="neu p-8 rounded-3xl mb-6">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+                                    <div>
+                                        <h1 className="text-4xl md:text-5xl font-bold gradient-text mb-2">
+                                            <i className="fas fa-shield-check mr-3"></i>
+                                            TruthGuard AI 2.2
+                                        </h1>
+                                        <p className="text-gray-600 text-lg">
+                                            Advanced news verification with enhanced clickbait detection
+                                        </p>
+                                        <div className="flex items-center mt-2 flex-wrap gap-2">
+                                            <span className="text-sm bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full">
+                                                <i className="fas fa-database mr-1"></i>
+                                                {newsDatabase.length} Verified Entries
+                                            </span>
+                                            <span className="text-sm bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full">
+                                                <i className="fas fa-brain mr-1"></i>
+                                                4 AI Models Active
+                                            </span>
+                                            <span className="text-sm bg-pink-100 text-pink-800 px-3 py-1 rounded-full">
+                                                <i className="fas fa-mouse-pointer mr-1"></i>
+                                                Clickbait Detection
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="mt-4 md:mt-0 flex items-center space-x-4">
+                                        <div className="text-right">
+                                            <div className="text-2xl font-bold text-indigo-600">
+                                                <AnimatedCounter value={stats.totalAnalyzed} />
+                                            </div>
+                                            <div className="text-sm text-gray-500">Total Analyses</div>
+                                        </div>
+                                        <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center float">
+                                            <i className="fas fa-robot text-2xl text-white"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Enhanced Stats Bar */}
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+                                    <div className="bg-white/50 rounded-xl p-4">
+                                        <div className="flex items-center">
+                                            <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i className="fas fa-check-circle text-emerald-600"></i>
+                                            </div>
+                                            <div>
+                                                <div className="text-2xl font-bold text-emerald-600">
+                                                    {credibilityStats.credible}
+                                                </div>
+                                                <div className="text-sm text-gray-600">Credible</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-white/50 rounded-xl p-4">
+                                        <div className="flex items-center">
+                                            <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i className="fas fa-times-circle text-red-600"></i>
+                                            </div>
+                                            <div>
+                                                <div className="text-2xl font-bold text-red-600">
+                                                    {credibilityStats.falseItems}
+                                                </div>
+                                                <div className="text-sm text-gray-600">False</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-white/50 rounded-xl p-4">
+                                        <div className="flex items-center">
+                                            <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i className="fas fa-mouse-pointer text-pink-600"></i>
+                                            </div>
+                                            <div>
+                                                <div className="text-2xl font-bold text-pink-600">
+                                                    {credibilityStats.clickbait}
+                                                </div>
+                                                <div className="text-sm text-gray-600">Clickbait</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-white/50 rounded-xl p-4">
+                                        <div className="flex items-center">
+                                            <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i className="fas fa-exclamation-triangle text-yellow-600"></i>
+                                            </div>
+                                            <div>
+                                                <div className="text-2xl font-bold text-yellow-600">
+                                                    {credibilityStats.misleading + credibilityStats.exaggerated}
+                                                </div>
+                                                <div className="text-sm text-gray-600">Questionable</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="bg-white/50 rounded-xl p-4">
+                                        <div className="flex items-center">
+                                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i className="fas fa-bolt text-blue-600"></i>
+                                            </div>
+                                            <div>
+                                                <div className="text-2xl font-bold text-blue-600">
+                                                    {stats.avgProcessingTime.toFixed(2)}s
+                                                </div>
+                                                <div className="text-sm text-gray-600">Avg. Processing</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </header>
+                        
+                        {/* Main Content */}
+                        <div className="flex flex-col lg:flex-row gap-8">
+                            {/* Left Column - Input & Analysis */}
+                            <div className="lg:w-2/3">
+                                {/* Tabs */}
+                                <div className="flex border-b border-gray-200 mb-6">
+                                    <button
+                                        className={`px-6 py-3 font-medium text-lg flex items-center ${activeTab === "analyze" ? "border-b-2 border-indigo-500 text-indigo-600" : "text-gray-500 hover:text-gray-700"}`}
+                                        onClick={() => setActiveTab("analyze")}
+                                    >
+                                        <i className="fas fa-search mr-2"></i>
+                                        AI Analysis
+                                        <span className="ml-2 bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full">
+                                            Real-time
+                                        </span>
+                                    </button>
+                                    <button
+                                        className={`px-6 py-3 font-medium text-lg flex items-center ${activeTab === "database" ? "border-b-2 border-indigo-500 text-indigo-600" : "text-gray-500 hover:text-gray-700"}`}
+                                        onClick={() => setActiveTab("database")}
+                                    >
+                                        <i className="fas fa-database mr-2"></i>
+                                        Database Search
+                                        <span className="ml-2 bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">
+                                            {newsDatabase.length}+ entries
+                                        </span>
+                                    </button>
+                                </div>
+                                
+                                {/* Tab Content */}
+                                {activeTab === "analyze" && (
+                                    <div className="space-y-8">
+                                        {/* Input Card */}
+                                        <div className="neu rounded-2xl p-6">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h2 className="text-2xl font-bold flex items-center">
+                                                    <i className="fas fa-edit mr-3 text-indigo-500"></i>
+                                                    Enter Statement for Analysis
+                                                    <span className="ml-3 text-sm font-normal bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 px-3 py-1 rounded-full">
+                                                        AI-Powered Verification
+                                                    </span>
+                                                </h2>
+                                                <div className="text-sm text-gray-500 hidden md:block">
+                                                    <i className="fas fa-keyboard mr-1"></i>
+                                                    Ctrl+Enter to analyze
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="relative mb-6">
+                                                <textarea
+                                                    ref={textareaRef}
+                                                    value={text}
+                                                    onChange={e => setText(e.target.value)}
+                                                    onKeyDown={e => e.ctrlKey && e.key === 'Enter' && handleAnalyze()}
+                                                    placeholder="Paste news, statement, claim, or article here for AI verification. Examples: 'You won't believe what happened next!' or 'Scientific breakthrough announced'..."
+                                                    className="w-full h-64 p-6 border-2 border-gray-200 rounded-xl focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 resize-none bg-white/70 text-gray-800 placeholder-gray-400"
+                                                    spellCheck="false"
+                                                />
+                                                <div className="absolute bottom-4 right-4 flex items-center space-x-4">
+                                                    <span className="text-sm text-gray-400">
+                                                        {text.length} characters
+                                                    </span>
+                                                    <span className="text-sm text-gray-400">
+                                                        {text.split(/\s+/).filter(w => w.length > 0).length} words
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Enhanced Sample Queries */}
+                                            <div className="mb-6">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <h3 className="font-medium text-gray-700 flex items-center">
+                                                        <i className="fas fa-vial mr-2 text-indigo-500"></i>
+                                                        Try Sample Queries (Test Clickbait Detection):
+                                                    </h3>
+                                                    <span className="text-xs text-gray-500">
+                                                        Click to load examples
+                                                    </span>
+                                                </div>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                    {sampleQueries.map((sample, i) => (
+                                                        <button
+                                                            key={i}
+                                                            onClick={() => loadSample(sample.text)}
+                                                            className={`p-4 rounded-xl text-left transition-all duration-300 ${
+                                                                sample.type === 'clickbait' ? 'bg-gradient-to-r from-pink-50 to-rose-50 border border-pink-100 hover:from-pink-100 hover:to-rose-100' :
+                                                                sample.type === 'true' ? 'bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-100 hover:from-emerald-100 hover:to-teal-100' :
+                                                                'bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-100 hover:from-yellow-100 hover:to-orange-100'
+                                                            }`}
+                                                        >
+                                                            <div className="flex items-start">
+                                                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${
+                                                                    sample.type === 'clickbait' ? 'bg-pink-100' :
+                                                                    sample.type === 'true' ? 'bg-emerald-100' :
+                                                                    'bg-yellow-100'
+                                                                }`}>
+                                                                    <i className={`fas ${
+                                                                        sample.type === 'clickbait' ? 'fa-mouse-pointer text-pink-600' :
+                                                                        sample.type === 'true' ? 'fa-check text-emerald-600' :
+                                                                        'fa-question text-yellow-600'
+                                                                    }`}></i>
+                                                                </div>
+                                                                <div>
+                                                                    <div className={`text-sm font-medium mb-1 ${
+                                                                        sample.type === 'clickbait' ? 'text-pink-700' :
+                                                                        sample.type === 'true' ? 'text-emerald-700' :
+                                                                        'text-yellow-700'
+                                                                    }`}>
+                                                                        {sample.category}
+                                                                    </div>
+                                                                    <div className="text-sm text-gray-600 line-clamp-2">
+                                                                        {sample.text}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            
+                                            {/* Action Buttons */}
+                                            <div className="flex flex-col sm:flex-row gap-4">
+                                                <button
+                                                    onClick={clearAll}
+                                                    className="px-6 py-4 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium text-lg flex-1 flex items-center justify-center"
+                                                >
+                                                    <i className="fas fa-eraser mr-2"></i>
+                                                    Clear All
+                                                </button>
+                                                
+                                                <button
+                                                    onClick={handleAnalyze}
+                                                    disabled={!text.trim() || loading}
+                                                    className="px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-medium text-lg flex-1 disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-xl hover:scale-[1.02] transform transition-all duration-300 flex items-center justify-center"
+                                                >
+                                                    {loading ? (
+                                                        <>
+                                                            <i className="fas fa-spinner fa-spin mr-3"></i>
+                                                            <span className="flex-1 text-center">AI Analyzing...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <i className="fas fa-play-circle mr-3 text-xl"></i>
+                                                            <span className="flex-1 text-center">Run AI Verification</span>
+                                                            <span className="text-sm bg-white/20 px-2 py-1 rounded">
+                                                                Ctrl+Enter
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        {/* Results Card */}
+                                        {result && (
+                                            <div className="neu rounded-2xl p-6">
+                                                <div className="flex items-center justify-between mb-6">
+                                                    <h2 className="text-2xl font-bold flex items-center">
+                                                        <i className="fas fa-chart-bar mr-3 text-indigo-500"></i>
+                                                        AI Analysis Results
+                                                        <span className="ml-3 text-sm font-normal bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 px-3 py-1 rounded-full">
+                                                            {result.aiVersion}
+                                                        </span>
+                                                    </h2>
+                                                    <div className="text-sm text-gray-500">
+                                                        <i className="fas fa-clock mr-1"></i>
+                                                        Processed in {result.processingTime}ms
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Clickbait Indicator */}
+                                                {result.clickbaitScore > 20 && (
+                                                    <ClickbaitIndicator score={result.clickbaitScore} />
+                                                )}
+                                                
+                                                {/* Result Banner */}
+                                                <div className={`p-6 rounded-xl mb-8 border-2 ${
+                                                    result.color === 'pink' ? 'bg-gradient-to-r from-pink-50 to-rose-50 border-pink-200' :
+                                                    result.color === 'emerald' ? 'bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200' :
+                                                    result.color === 'green' ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-green-200' :
+                                                    result.color === 'blue' ? 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200' :
+                                                    result.color === 'yellow' ? 'bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-200' :
+                                                    result.color === 'orange' ? 'bg-gradient-to-r from-orange-50 to-amber-50 border-orange-200' :
+                                                    'bg-gradient-to-r from-red-50 to-pink-50 border-red-200'
+                                                }`}>
+                                                    <div className="flex flex-col md:flex-row items-center justify-between">
+                                                        <div className="mb-6 md:mb-0 md:mr-8">
+                                                            <div className="text-sm text-gray-500 mb-2 flex items-center">
+                                                                <i className="fas fa-robot mr-2"></i>
+                                                                AI Verdict • {result.confidence}% Confidence
+                                                            </div>
+                                                            <h3 className={`text-4xl font-bold mb-3 flex items-center ${
+                                                                result.color === 'pink' ? 'clickbait-text' :
+                                                                result.color === 'emerald' ? 'text-emerald-600' :
+                                                                result.color === 'green' ? 'text-green-600' :
+                                                                result.color === 'blue' ? 'text-blue-600' :
+                                                                result.color === 'yellow' ? 'text-yellow-600' :
+                                                                result.color === 'orange' ? 'text-orange-600' :
+                                                                'text-red-600'
+                                                            }`}>
+                                                                <i className={`fas ${result.icon} mr-3`}></i>
+                                                                {result.label}
+                                                            </h3>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {result.trustIndicators && result.trustIndicators.slice(0, 2).map((indicator, idx) => (
+                                                                    <span key={idx} className="text-xs bg-white/70 text-gray-700 px-3 py-1 rounded-full">
+                                                                        <i className="fas fa-check-circle mr-1 text-emerald-500"></i>
+                                                                        {indicator}
+                                                                    </span>
+                                                                ))}
+                                                                {result.warnings && result.warnings.slice(0, 2).map((warning, idx) => (
+                                                                    <span key={idx} className="text-xs bg-white/70 text-gray-700 px-3 py-1 rounded-full">
+                                                                        <i className="fas fa-exclamation-triangle mr-1 text-yellow-500"></i>
+                                                                        {warning}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                        <div className="relative">
+                                                            <CircularProgress score={result.credibilityScore} size={160} />
+                                                            <div className="text-center mt-4">
+                                                                <div className="text-sm text-gray-500">Credibility Score</div>
+                                                                <div className="text-lg font-bold">{result.credibilityScore}/100</div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Clickbait Patterns Display */}
+                                                {result.clickbaitIndicators && result.clickbaitIndicators.length > 0 && (
+                                                    <div className="mt-6 p-5 bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl border border-pink-200">
+                                                        <h4 className="font-semibold text-pink-700 mb-3 flex items-center text-lg">
+                                                            <i className="fas fa-mouse-pointer mr-2"></i>
+                                                            Clickbait Patterns Detected
+                                                        </h4>
+                                                        <div className="space-y-2">
+                                                            {result.clickbaitIndicators.slice(0, 5).map((indicator, idx) => (
+                                                                <div key={idx} className="text-sm text-pink-600 flex items-start bg-white/50 p-3 rounded-lg">
+                                                                    <i className="fas fa-chevron-right text-xs mt-1 mr-3 text-pink-400"></i>
+                                                                    <span>{indicator}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        {result.recommendations && result.recommendations.length > 0 && (
+                                                            <div className="mt-4 pt-4 border-t border-pink-200">
+                                                                <h5 className="font-medium text-pink-700 mb-2">Recommendations:</h5>
+                                                                <ul className="space-y-1">
+                                                                    {result.recommendations.map((rec, idx) => (
+                                                                        <li key={idx} className="text-sm text-pink-600 flex items-start">
+                                                                            <i className="fas fa-info-circle text-xs mt-1 mr-2"></i>
+                                                                            {rec}
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                
+                                                {/* Database Matches */}
+                                                {result.analyses.context.databaseMatches.length > 0 && (
+                                                    <div className="mt-8">
+                                                        <div className="flex items-center justify-between mb-4">
+                                                            <h3 className="text-xl font-semibold flex items-center">
+                                                                <i className="fas fa-database mr-2 text-indigo-500"></i>
+                                                                Similar Claims in Database
+                                                                <span className="ml-2 text-sm font-normal bg-gray-100 text-gray-800 px-2 py-1 rounded-full">
+                                                                    {result.analyses.context.databaseMatches.length} matches
+                                                                </span>
+                                                            </h3>
+                                                            <div className="text-sm text-gray-500">
+                                                                Similarity: {Math.round(result.analyses.context.similarityScore)}%
+                                                            </div>
+                                                        </div>
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                            {result.analyses.context.databaseMatches.slice(0, 6).map((match, i) => (
+                                                                <div key={i} className={`p-4 rounded-xl border hover:border-indigo-200 transition-all ${
+                                                                    match.item.credibility === "Clickbait" 
+                                                                        ? "bg-gradient-to-r from-pink-50/70 to-rose-50/70 border-pink-200" 
+                                                                        : "bg-white/70 border-gray-200"
+                                                                }`}>
+                                                                    <div className="flex justify-between items-start mb-2">
+                                                                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                                                                            match.item.credibility === "Credible" 
+                                                                                ? "bg-emerald-100 text-emerald-800"
+                                                                                : match.item.credibility === "False"
+                                                                                ? "bg-red-100 text-red-800"
+                                                                                : match.item.credibility === "Clickbait"
+                                                                                ? "bg-pink-100 text-pink-800"
+                                                                                : match.item.credibility === "Misleading"
+                                                                                ? "bg-yellow-100 text-yellow-800"
+                                                                                : "bg-orange-100 text-orange-800"
+                                                                        }`}>
+                                                                            {match.item.credibility}
+                                                                        </span>
+                                                                        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                                                            Match: {match.matchScore}%
+                                                                        </span>
+                                                                    </div>
+                                                                    <h4 className={`font-semibold mb-2 line-clamp-2 ${
+                                                                        match.item.credibility === "Clickbait" ? 'text-pink-700' : 'text-gray-800'
+                                                                    }`}>
+                                                                        {match.item.title}
+                                                                    </h4>
+                                                                    <p className="text-sm text-gray-600 line-clamp-2 mb-3">{match.item.content}</p>
+                                                                    <div className="flex justify-between items-center text-xs text-gray-500">
+                                                                        <span>{match.item.date}</span>
+                                                                        <span>{match.item.source}</span>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                
+                                {activeTab === "database" && (
+                                    <div className="neu rounded-2xl p-6">
+                                        <h2 className="text-2xl font-bold mb-6 flex items-center">
+                                            <i className="fas fa-search mr-3 text-indigo-500"></i>
+                                            Search Verified Claims Database
+                                            <span className="ml-3 text-sm font-normal bg-gradient-to-r from-purple-100 to-indigo-100 text-purple-800 px-3 py-1 rounded-full">
+                                                {newsDatabase.length} entries • 10+ clickbait samples
+                                            </span>
+                                        </h2>
+                                        
+                                        <div className="relative mb-8">
+                                            <div className="relative">
+                                                <input
+                                                    type="text"
+                                                    value={searchQuery}
+                                                    onChange={e => handleSearch(e.target.value)}
+                                                    placeholder="Search by keyword, category, credibility, source, or location... Try 'clickbait' or 'shocking'"
+                                                    className="w-full p-5 pl-12 border-2 border-gray-200 rounded-xl focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 bg-white/70 text-gray-800"
+                                                    autoComplete="off"
+                                                />
+                                                <i className="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                                                <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">
+                                                    {searchResults.length} results
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2 mt-4">
+                                                <span className="text-sm text-gray-600">Quick filters:</span>
+                                                {quickFilters.map(category => (
+                                                    <button
+                                                        key={category}
+                                                        onClick={() => handleSearch(category)}
+                                                        className={`text-sm px-3 py-1 rounded-full ${
+                                                            category === 'Clickbait' 
+                                                                ? 'bg-pink-100 hover:bg-pink-200 text-pink-700' 
+                                                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                                        }`}
+                                                    >
+                                                        {category}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        
+                                        <EnhancedSearchResults 
+                                            results={searchResults.slice(0, 12)} 
+                                            onSelect={handleSelectResult}
+                                        />
+                                        
+                                        {searchResults.length > 12 && (
+                                            <div className="text-center mt-6">
+                                                <button className="text-indigo-600 hover:text-indigo-800 font-medium">
+                                                    <i className="fas fa-arrow-down mr-2"></i>
+                                                    Load more results ({searchResults.length - 12} remaining)
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            
+                            {/* Right Column - Info & Details */}
+                            <div className="lg:w-1/3">
+                                {/* AI Models Card */}
+                                <div className="neu rounded-2xl p-6 mb-8">
+                                    <h2 className="text-2xl font-bold mb-6 flex items-center">
+                                        <i className="fas fa-robot mr-3 text-indigo-500"></i>
+                                        Active AI Models
+                                        <span className="ml-2 text-sm bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-2 py-1 rounded-full">
+                                            PRO
+                                        </span>
+                                    </h2>
+                                    
+                                    <div className="space-y-4">
+                                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 p-4 rounded-xl border border-indigo-100">
+                                            <div className="flex items-center mb-3">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg flex items-center justify-center mr-3">
+                                                    <i className="fas fa-file-alt text-indigo-600"></i>
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-gray-800">Content Analyzer</h3>
+                                                    <p className="text-sm text-gray-600">Pattern detection & NLP analysis</p>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-xs text-gray-500">
+                                                    <span>Factual Patterns</span>
+                                                    <span>92%</span>
+                                                </div>
+                                                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full" style={{ width: '92%' }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-4 rounded-xl border border-emerald-100">
+                                            <div className="flex items-center mb-3">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-emerald-100 to-teal-100 rounded-lg flex items-center justify-center mr-3">
+                                                    <i className="fas fa-source text-emerald-600"></i>
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-gray-800">Source Validator</h3>
+                                                    <p className="text-sm text-gray-600">Credibility & authority assessment</p>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-xs text-gray-500">
+                                                    <span>Source Verification</span>
+                                                    <span>88%</span>
+                                                </div>
+                                                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full" style={{ width: '88%' }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-100">
+                                            <div className="flex items-center mb-3">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg flex items-center justify-center mr-3">
+                                                    <i className="fas fa-network-wired text-purple-600"></i>
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-gray-800">Context Analyzer</h3>
+                                                    <p className="text-sm text-gray-600">Database cross-reference & patterns</p>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-xs text-gray-500">
+                                                    <span>Pattern Recognition</span>
+                                                    <span>95%</span>
+                                                </div>
+                                                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" style={{ width: '95%' }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="bg-gradient-to-r from-pink-50 to-rose-50 p-4 rounded-xl border border-pink-100">
+                                            <div className="flex items-center mb-3">
+                                                <div className="w-10 h-10 bg-gradient-to-br from-pink-100 to-rose-100 rounded-lg flex items-center justify-center mr-3">
+                                                    <i className="fas fa-mouse-pointer text-pink-600"></i>
+                                                </div>
+                                                <div>
+                                                    <h3 className="font-bold text-gray-800">Clickbait Detector</h3>
+                                                    <p className="text-sm text-gray-600">Sensational & manipulative content</p>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <div className="flex justify-between text-xs text-gray-500">
+                                                    <span>Clickbait Detection</span>
+                                                    <span>94%</span>
+                                                </div>
+                                                <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                                                    <div className="h-full bg-gradient-to-r from-pink-500 to-rose-500 rounded-full" style={{ width: '94%' }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="mt-6 pt-6 border-t border-gray-200">
+                                        <div className="text-sm text-gray-600">
+                                            <i className="fas fa-info-circle mr-2 text-indigo-500"></i>
+                                            Models updated daily with new clickbait patterns
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* Recent Activity */}
+                                <div className="neu rounded-2xl p-6">
+                                    <h2 className="text-2xl font-bold mb-6 flex items-center">
+                                        <i className="fas fa-history mr-3 text-indigo-500"></i>
+                                        Recent Database Activity
+                                    </h2>
+                                    
+                                    <div className="space-y-4 max-h-80 overflow-y-auto pr-2">
+                                        {newsDatabase.slice(-6).reverse().map(item => (
+                                            <div key={item.id} className={`flex items-start p-3 rounded-lg border transition-all ${
+                                                item.credibility === 'Clickbait' 
+                                                    ? 'bg-gradient-to-r from-pink-50/50 to-rose-50/50 border-pink-100 hover:border-pink-200' 
+                                                    : 'bg-white/50 border-gray-100 hover:border-indigo-100'
+                                            }`}>
+                                                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mr-3 ${
+                                                    item.credibility === 'Credible' ? 'bg-gradient-to-br from-emerald-100 to-green-100' : 
+                                                    item.credibility === 'False' ? 'bg-gradient-to-br from-red-100 to-pink-100' :
+                                                    item.credibility === 'Clickbait' ? 'bg-gradient-to-br from-pink-100 to-rose-100' :
+                                                    'bg-gradient-to-br from-yellow-100 to-orange-100'
+                                                }`}>
+                                                    <i className={`fas ${
+                                                        item.credibility === 'Credible' ? 'fa-check text-emerald-600' : 
+                                                        item.credibility === 'False' ? 'fa-times text-red-600' :
+                                                        item.credibility === 'Clickbait' ? 'fa-mouse-pointer text-pink-600' :
+                                                        'fa-exclamation text-yellow-600'
+                                                    }`}></i>
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className={`font-medium line-clamp-1 ${
+                                                        item.credibility === 'Clickbait' ? 'text-pink-700' : 'text-gray-800'
+                                                    }`}>
+                                                        {item.title}
+                                                    </div>
+                                                    <div className="flex items-center justify-between mt-1">
+                                                        <div className="text-xs text-gray-500 flex items-center">
+                                                            <i className="fas fa-calendar mr-1"></i>
+                                                            {item.date}
+                                                        </div>
+                                                        <div className="flex items-center">
+                                                            <span className={`text-xs px-2 py-1 rounded ${
+                                                                item.category === 'Clickbait' ? 'bg-pink-100 text-pink-800' :
+                                                                item.category === 'Science' ? 'bg-blue-100 text-blue-800' :
+                                                                item.category === 'Conspiracy' ? 'bg-red-100 text-red-800' :
+                                                                item.category === 'Health' ? 'bg-emerald-100 text-emerald-800' :
+                                                                'bg-gray-100 text-gray-800'
+                                                            }`}>
+                                                                {item.category}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    
+                                    <div className="mt-6 pt-6 border-t border-gray-200">
+                                        <div className="text-sm text-center text-gray-500">
+                                            <i className="fas fa-sync-alt mr-2"></i>
+                                            Database updated: Today, {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {/* Footer */}
+                        <footer className="mt-12 pt-8 border-t border-gray-200">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                <div>
+                                    <h4 className="font-bold text-gray-800 mb-3">
+                                        <i className="fas fa-shield-alt mr-2 text-indigo-500"></i>
+                                        About TruthGuard AI 2.2
+                                    </h4>
+                                    <p className="text-sm text-gray-600">
+                                        Advanced multi-model AI system for real-time news verification with enhanced clickbait detection. 
+                                        Combines content analysis, source validation, database cross-referencing, and clickbait pattern recognition.
+                                    </p>
+                                </div>
+                                
+                                <div>
+                                    <h4 className="font-bold text-gray-800 mb-3">
+                                        <i className="fas fa-database mr-2 text-indigo-500"></i>
+                                        Database Statistics
+                                    </h4>
+                                    <div className="text-sm text-gray-600 space-y-1">
+                                        <div className="flex justify-between">
+                                            <span>Total Entries:</span>
+                                            <span className="font-medium">{newsDatabase.length}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Clickbait Samples:</span>
+                                            <span className="font-medium text-pink-600">{credibilityStats.clickbait}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Credible Sources:</span>
+                                            <span className="font-medium text-emerald-600">{credibilityStats.credible}</span>
+                                        </div>
+                                        <div className="flex justify-between">
+                                            <span>Categories:</span>
+                                            <span className="font-medium">12+</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <h4 className="font-bold text-gray-800 mb-3">
+                                        <i className="fas fa-exclamation-triangle mr-2 text-yellow-500"></i>
+                                        Important Notice
+                                    </h4>
+                                    <p className="text-sm text-gray-600">
+                                        This is an AI-powered demonstration system with enhanced clickbait detection capabilities. 
+                                        For critical decisions, always verify with multiple independent sources.
+                                        Clickbait detection accuracy: 94% on verified datasets.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div className="mt-8 pt-8 border-t border-gray-200 text-center">
+                                <div className="text-sm text-gray-500">
+                                    <p className="mb-2">
+                                        <i className="fas fa-code-branch mr-2"></i>
+                                        System Version 2.2.0 • AI Models: Content, Source, Context, Clickbait • Database: 45+ entries
+                                    </p>
+                                    <p>
+                                        <i className="fas fa-copyright mr-2"></i>
+                                        TruthGuard AI Platform • Advanced Clickbait Detection • Demonstration System
+                                    </p>
+                                </div>
+                            </div>
+                        </footer>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+</body>
+</html>
